@@ -10,10 +10,6 @@
 #define DC A2
 
 
-Display_obj::Display_obj(){
-  //setupDisplay();
-}
-
 void Display_obj::setupDisplay() {
   //Setup pinmodes for the various pins
   pinMode(DC, OUTPUT);
