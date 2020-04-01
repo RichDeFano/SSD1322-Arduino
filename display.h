@@ -9,7 +9,7 @@ class Display_obj
 {
   public:
     Display_obj();
-    ~Display_obj
+    ~Display_obj();
     void setupDisplay();
     void wipeDisplay();
     void fillDisplay();
