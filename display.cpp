@@ -2,8 +2,8 @@
 
 #include <SPI.h>
 #include "Arduino.h"
-
 #include "display.h"
+#include <stdint.h>
 
 #define CS A0
 #define RST A1
@@ -11,7 +11,7 @@
 
 
 Display_obj::Display_obj(){
-  
+  //setupDisplay();
 }
 
 void Display_obj::setupDisplay() {
@@ -212,6 +212,7 @@ void Display_obj::defaultDisplay(){
       writeData(0x0F);
     }
   }
+
 }
 
 /*
@@ -286,7 +287,7 @@ void Display_obj::fillDisplay(){
   a very customizable way to write pixels, and row/column settings can be changed. This WILL mess up the function, and may
   not read the values in the correct order.
 */
-void Display_obj::drawBitmap(int xPos, int yPos, double width, double height, const char *bitmap, size_t buffSize){
+void Display_obj::drawBitmap(int xPos, int yPos, double width, double height, unsigned char *bitmap, size_t buffSize){
   unsigned int i, j;
   double col, loopWidth;
   int fillWithBlank;
@@ -295,8 +296,8 @@ void Display_obj::drawBitmap(int xPos, int yPos, double width, double height, co
   uint8_t highBinMask = B11110000;
   bool onLowNibble = false;
   
-  uint8_t *tempBuffer = malloc(buffSize);           //Initialize a buffer of the same size
-  uint8_t *nibbleBuffer = malloc(buffSize*2);       //Initialize a buffer of double the size(as each nibble is seperated)
+  uint8_t tempBuffer[buffSize];                     //Initialize a buffer of the same size
+  uint8_t nibbleBuffer[buffSize*2];                 //Initialize a buffer of double the size(as each nibble is seperated)
 
   int nibCount = 0;
   for (int q=0; q<buffSize; q++)                    //For each entry in the bitmap, copy the high and low nibbles to a new buffer.
@@ -388,7 +389,7 @@ void Display_obj::drawBitmap(int xPos, int yPos, double width, double height, co
               count++;
               uint8_t newHex = nibbleCombine(lowNibAt,highNibAt);
               writeData(newHex);
-              Serial.print(" H L 0 0");
+              //Serial.print(" H L 0 0");
             }
             else
             {
@@ -398,7 +399,7 @@ void Display_obj::drawBitmap(int xPos, int yPos, double width, double height, co
               count++;
               uint8_t newHex = nibbleCombine(nextHighNibAt,lowNibAt);
               writeData(newHex);
-              Serial.print(" L NH 0 0");
+              //Serial.print(" L NH 0 0");
               onLowNibble = true;
             }
           }
@@ -420,7 +421,7 @@ void Display_obj::drawBitmap(int xPos, int yPos, double width, double height, co
               writeData(newHex);
               uint8_t newHex2 = nibbleCombine(lowNibAt,highNibAt);
               writeData(newHex2);
-              Serial.print(" H L NH 0");
+              //Serial.print(" H L NH 0");
               onLowNibble = true;
             }
             else
@@ -437,7 +438,7 @@ void Display_obj::drawBitmap(int xPos, int yPos, double width, double height, co
               uint8_t newHex2 = nibbleCombine(nextHighNibAt,lowNibAt);
               writeData(newHex2);
 
-              Serial.print(" L NH NL 0");
+              //Serial.print(" L NH NL 0");
               onLowNibble = false;
             }
           }
@@ -461,7 +462,7 @@ void Display_obj::drawBitmap(int xPos, int yPos, double width, double height, co
               writeData(newHex);
               uint8_t newHex2 = nibbleCombine(lowNibAt,highNibAt);
               writeData(newHex2);
-              Serial.print(" H L NH NL");
+              //Serial.print(" H L NH NL");
               onLowNibble = false;
             }
             else
@@ -480,7 +481,7 @@ void Display_obj::drawBitmap(int xPos, int yPos, double width, double height, co
               uint8_t newHex2 = nibbleCombine(nextHighNibAt,lowNibAt);
               writeData(newHex2);
 
-              Serial.print(" L NH NL NNH");
+              //Serial.print(" L NH NL NNH");
               onLowNibble = true;
             }
           }
@@ -508,7 +509,7 @@ void Display_obj::drawBitmap(int xPos, int yPos, double width, double height, co
               writeData(newHex2);
               
               
-              Serial.print(" H L NH NL |");
+              //Serial.print(" H L NH NL |");
             }
 
             else
@@ -528,15 +529,13 @@ void Display_obj::drawBitmap(int xPos, int yPos, double width, double height, co
               writeData(newHex2);
               
               
-              Serial.print(" L NH NL NNH |");
+              //Serial.print(" L NH NL NNH |");
               
             }
           }
         }
       } 
     }
-    free(nibbleBuffer);
-    free(tempBuffer);
   }
 
 /*
@@ -628,3 +627,29 @@ void Display_obj::drawBitmap(int xPos, int yPos, double width, double height, co
     emptyMask = emptyMask + highNibble + lowNibble;
     return emptyMask;
   }
+
+
+
+/*
+  Function Name: drawAnimatedBitmap
+  Funciton Parameters: (int) xPos - The x position of the bitmap
+                      (int yPos) - The y position of the bitmap
+                      (Bitmap& b) - The Bitmap object that the user wishes to draw
+                      (int ms) - The delay in ms between each frame
+  Function Description: Draw Each frame of a full bitmap with a certain delay.
+  */
+void Display_obj::drawAnimatedBitmap(int xPos, int yPos, Bitmap& b, int ms){
+
+size_t currSize = b.getSize();
+uint8_t numbOfFrames = b.getFrames();
+double width = b.getWidth();
+double height = b.getHeight();
+
+  for (int i = 0; i < numbOfFrames; i++)
+  {
+    unsigned char* frameAt = b.getBitmap(i);                   //Return the pointer to a certain bitmap frame
+    drawBitmap(xPos,yPos,width,height, frameAt, currSize);    //Draw the frame to the screen
+    delay(ms);                                                //Wait a certain amount of time before drawing another
+  }
+
+}
