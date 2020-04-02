@@ -174,9 +174,6 @@ const static unsigned char* const waddle_table[] PROGMEM = {
 };
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 
-
-
-
 const static unsigned char block_bits[] PROGMEM = {   
   0xFE, 0xDC, 0xBA, 0x98, 0x76, 0x54, 0x32, 0x10,
   0xFE, 0xDC, 0xBA, 0x98, 0x76, 0x54, 0x32, 0x10,

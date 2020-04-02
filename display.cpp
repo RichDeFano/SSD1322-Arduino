@@ -283,15 +283,20 @@ void Display_obj::fillDisplay(){
   a very customizable way to write pixels, and row/column settings can be changed. This WILL mess up the function, and may
   not read the values in the correct order.
 */
-void Display_obj::drawBitmap(int xPos, int yPos, double width, double height, unsigned char *bitmap, size_t buffSize){
-  unsigned int i, j;
-  double col, loopWidth;
-  int fillWithBlank;
+ void Display_obj::drawBitmap(double xPos, double yPos, double width, double height, unsigned char *bitmap, size_t buffSize){
+    unsigned int i, j, h, w;
+    double col, loopWidth, columnNums;
+    int fillWithBlank, mapSize,mapCount, padBeginning, paddedColsAdded;
+    uint8_t zeroNib,fNib,lowBinMask, highBinMask;
+    bool onLowNibble;
 
-  uint8_t lowBinMask = B00001111;
-  uint8_t highBinMask = B11110000;
-  bool onLowNibble = false;
-  
+  lowBinMask = B00001111;
+  highBinMask = B11110000;
+  onLowNibble = false;
+  //////////////////////////////////////////////////////////////////////////////
+  //This section will read the incoming bitmap and save it to a buffer
+  //to be used later to fetch data from the array, one nibble at a time.
+  //////////////////////////////////////////////////////////////////////////////
   uint8_t tempBuffer[buffSize];                     //Initialize a buffer of the same size
   uint8_t nibbleBuffer[buffSize*2];                 //Initialize a buffer of double the size(as each nibble is seperated)
 
@@ -307,261 +312,191 @@ void Display_obj::drawBitmap(int xPos, int yPos, double width, double height, un
     nibbleBuffer[nibCount] = lowNib;
     nibCount++;
   }
+    //////////////////////////////////////////////////////////////////////////////
+    //This section checks to see if the image needs any padding.
+    //If an image is offset anything other than a factor of 4, it will need 
+    //padding as a column address points to a group of four colums.
+    //If an images width then needs padding at the end of the column to contain
+    //The proper image, this is also calculated.
+    //////////////////////////////////////////////////////////////////////////////
+    if ((int)xPos%4 != 0)
+      {padBeginning = ((int)xPos%4);}
+    else
+      {padBeginning = 0;}
 
-  
-  if ((int)width%4 != 0)                            //As the display columns are 4 pixels long, we must check for later where the bitmap ends.
-    {fillWithBlank = 4 - ((int)width%4);}
-  else
-    {fillWithBlank = 0;}
-  
-  loopWidth = ceil((width/4));
-  
-  if (width <= 4)                                   //If the picture is less than a full column, dont increment the col address.
-    {col = 0x1C;}
-  else
-    {col = ceil((width/4))-1 + 0x1C;}
-
-  writeCommand(0x15);                               //Set Column Address
-    writeData(0x1C);// + ceil(xPos/4));
-    writeData(col);
-
-  writeCommand(0x75);                               //Set Row Address
-  writeData(yPos);
-  if (height != 1)
-    {writeData((height-1)+yPos);}
-  else
-    {writeData(height+yPos);}
-  
-  writeCommand(0x5C);                               //Set Write Ram **ALL data written after will be saved in GDDRAM of the display.
-                                                    //This is what controls which pixels are on and off.
-
-  int count = 0;
-    for (i=0; i<height; i++) //Row
-    {
-      /*
-       * need to fix width < 4 stuff
-       * bottom of bitmap flashes at the beginning/end of every draw
-       * need to fix x positioning
-       * why is screen very flickery?
-       * top 4 rows are corrupted/overwritted
-       */
-      for (j=0; j<loopWidth; j++) //Col
-      {
-        uint8_t zeroNib = B0000;
-
-        if (j == loopWidth - 1)
-        {
-          if (fillWithBlank == 3)
-          {
-            writeData(0x00);
-              //writeData(0x0N);
-            if (onLowNibble == false)
-            {
-              uint8_t highNibAt = nibbleBuffer[count];
-              count++;
-              uint8_t newHex = nibbleCombine(zeroNib,highNibAt);
-              writeData(newHex);
-                  //Serial.print(" H 0 0 0)");
-              onLowNibble = true;
-            }
-            else
-            {
-              uint8_t lowNibAt = nibbleBuffer[count];
-              count++;
-              uint8_t newHex = nibbleCombine(zeroNib,lowNibAt);
-              writeData(newHex);
-                  //Serial.print(" L 0 0 0");
-            }
-          }
-          else if (fillWithBlank == 2)
-          {
-            writeData(0x00);
-              //writeData(0xNN);
-            if (onLowNibble == false)
-            {
-              uint8_t lowNibAt = nibbleBuffer[count];
-              count++;
-              uint8_t highNibAt = nibbleBuffer[count];
-              count++;
-              uint8_t newHex = nibbleCombine(lowNibAt,highNibAt);
-              writeData(newHex);
-              //Serial.print(" H L 0 0");
-            }
-            else
-            {
-              uint8_t lowNibAt = nibbleBuffer[count];
-              count++;
-              uint8_t nextHighNibAt = nibbleBuffer[count];
-              count++;
-              uint8_t newHex = nibbleCombine(nextHighNibAt,lowNibAt);
-              writeData(newHex);
-              //Serial.print(" L NH 0 0");
-              onLowNibble = true;
-            }
-          }
-          else if (fillWithBlank == 1)
-          {
-              //writeData(0x0N);
-              //writeData(0xNN);
-            if (onLowNibble == false)
-            {
-              uint8_t highNibAt = nibbleBuffer[count];
-              count++;
-              uint8_t lowNibAt = nibbleBuffer[count];
-              count++;
-              uint8_t nextHighNibAt = nibbleBuffer[count];
-              count++;
-
-              
-              uint8_t newHex = nibbleCombine(zeroNib,nextHighNibAt);
-              writeData(newHex);
-              uint8_t newHex2 = nibbleCombine(lowNibAt,highNibAt);
-              writeData(newHex2);
-              //Serial.print(" H L NH 0");
-              onLowNibble = true;
-            }
-            else
-            {
-              uint8_t lowNibAt = nibbleBuffer[count];
-              count++;
-              uint8_t nextHighNibAt = nibbleBuffer[count];
-              count++;
-              uint8_t nextLowNibAt = nibbleBuffer[count];
-              count++;
-              
-              uint8_t newHex = nibbleCombine(zeroNib,nextLowNibAt);
-              writeData(newHex);
-              uint8_t newHex2 = nibbleCombine(nextHighNibAt,lowNibAt);
-              writeData(newHex2);
-
-              //Serial.print(" L NH NL 0");
-              onLowNibble = false;
-            }
-          }
-          else if (fillWithBlank == 0)
-          {
-              //writeData(0x0N);
-              //writeData(0xNN);
-            if (onLowNibble == false)
-            {
-              uint8_t highNibAt = nibbleBuffer[count];
-              count++;
-              uint8_t lowNibAt = nibbleBuffer[count];
-              count++;
-              uint8_t nextHighNibAt = nibbleBuffer[count];
-              count++;
-              uint8_t nextLowNibAt = nibbleBuffer[count];
-              count++;
-
-              
-              uint8_t newHex = nibbleCombine(nextLowNibAt,nextHighNibAt);
-              writeData(newHex);
-              uint8_t newHex2 = nibbleCombine(lowNibAt,highNibAt);
-              writeData(newHex2);
-              //Serial.print(" H L NH NL");
-              onLowNibble = false;
-            }
-            else
-            {
-              uint8_t lowNibAt = nibbleBuffer[count];
-              count++;
-              uint8_t nextHighNibAt = nibbleBuffer[count];
-              count++;
-              uint8_t nextLowNibAt = nibbleBuffer[count];
-              count++;
-              uint8_t nnHighNibAt = nibbleBuffer[count];
-              count++;
-              
-              uint8_t newHex = nibbleCombine(nnHighNibAt,nextLowNibAt);
-              writeData(newHex);
-              uint8_t newHex2 = nibbleCombine(nextHighNibAt,lowNibAt);
-              writeData(newHex2);
-
-              //Serial.print(" L NH NL NNH");
-              onLowNibble = true;
-            }
-          }
-        }
-        else
-        {
-              //writeData(0xNN);
-              //writeData(0xNN);
-          if (j <= loopWidth - 2)
-          {
-            if (onLowNibble == false)
-            {     
-              uint8_t highNibAt = nibbleBuffer[count];
-              count++;
-              uint8_t lowNibAt = nibbleBuffer[count];
-              count++;
-              uint8_t nextHighNibAt = nibbleBuffer[count];
-              count++;
-              uint8_t nextLowNibAt = nibbleBuffer[count];
-              count++;
-              
-              uint8_t newHex = nibbleCombine(nextLowNibAt,nextHighNibAt);
-              writeData(newHex);
-              uint8_t newHex2 = nibbleCombine(lowNibAt,highNibAt);
-              writeData(newHex2);
-              
-              
-              //Serial.print(" H L NH NL |");
-            }
-
-            else
-            {
-              uint8_t lowNibAt = nibbleBuffer[count];
-              count++;
-              uint8_t nextHighNibAt = nibbleBuffer[count];
-              count++;
-              uint8_t nextLowNibAt = nibbleBuffer[count];
-              count++;
-              uint8_t nnextHighNibAt = nibbleBuffer[count];
-              count++;
-              
-              uint8_t newHex = nibbleCombine(nnextHighNibAt,nextLowNibAt);
-              writeData(newHex);
-              uint8_t newHex2 = nibbleCombine(nextHighNibAt,lowNibAt);
-              writeData(newHex2);
-              
-              
-              //Serial.print(" L NH NL NNH |");
-              
-            }
-          }
-        }
-      } 
-    }
-  }
-
-/*
-  Function Name: drawRect
-  Function Parameters: (int) xPos - X Position of image
-                      (int) yPos - Y position of image
-                      (double) width - width of image in pixels
-                      (double) height - height of image in pixels
-  Function Description: Draw a rectangle covering the width and height inputted. This function
-    is a simplified version of the draw bitmap function, where each pixel is hardcoded to maximum brightness.
-*/
-  void Display_obj::drawRect(int xPos, int yPos, double width, double height){
-    unsigned int i, j;
-    double col, loopWidth;
-    int fillWithBlank;
-
-    if ((int)width%4 != 0)
-      {fillWithBlank = 4 - ((int)width%4);}
+    if ((int)(width+padBeginning)%4 != 0)
+      {fillWithBlank = 4 - ((int)(width+padBeginning)%4);}
     else
       {fillWithBlank = 0;}
-    
+
+    if (fillWithBlank == 4)
+      {fillWithBlank = 0;}
+
+    if (fillWithBlank + padBeginning >= 4)
+        {paddedColsAdded = 1;}   
+    else
+      {paddedColsAdded = 0;}
+
     loopWidth = ceil((width/4));
-    
+    columnNums = floor(xPos/4);
+
     if (width <= 4)
       {col = 0x1C;}
     else
-      {col = ceil((width/4))-1 + 0x1C;}
+      {col = ceil((width/4))-1 + 0x1C + columnNums + paddedColsAdded;}
 
+
+    //////////////////////////////////////////////////////////////////////////////
+    //This section will create a new bitmap, by writing each nibble to a new buffer, mapToDraw.
+    //Zeroes will be added to the bitmap order without breaking the image contained within
+    //the padding.
+    //////////////////////////////////////////////////////////////////////////////
+    mapSize = (width+fillWithBlank+padBeginning)*(height);
+    mapCount = 0;
+    zeroNib = 0x0;
+    fNib = 0xF;
+    uint8_t mapToDraw[mapSize*2];
+    nibCount = 0;
+    //Nibbles are added in the order of High_Byte(lowNibble,HighNibble), Low_Byte(lowNibble,HighNibble)
+    for (h=0; h<height; h++)
+    {
+      //Serial.println(" ");
+      if (padBeginning == 1)
+          {
+            //Serial.print("1 F F F");
+
+            mapToDraw[mapCount] = nibbleBuffer[nibCount];
+              mapCount++;
+              nibCount++;
+            mapToDraw[mapCount] = zeroNib;
+            mapCount++;
+            mapToDraw[mapCount] = nibbleBuffer[nibCount];
+              mapCount++;
+              nibCount++;
+            mapToDraw[mapCount] = nibbleBuffer[nibCount];
+              mapCount++;
+              nibCount++;
+          }
+      if (padBeginning == 2)
+          {
+            //Serial.print("1 1 F F");
+            mapToDraw[mapCount] = zeroNib;
+            mapCount++;
+            mapToDraw[mapCount] = zeroNib;
+            mapCount++;
+            mapToDraw[mapCount] = nibbleBuffer[nibCount];
+              mapCount++;
+              nibCount++;
+            mapToDraw[mapCount] = nibbleBuffer[nibCount];
+              mapCount++;
+              nibCount++;
+          }
+      if (padBeginning == 3)
+          {
+            //Serial.print("1 1 1 F");
+            mapToDraw[mapCount] = zeroNib;
+            mapCount++;
+            mapToDraw[mapCount] = zeroNib;
+            mapCount++;
+            mapToDraw[mapCount] = nibbleBuffer[nibCount];
+              mapCount++;
+              nibCount++;
+            mapToDraw[mapCount] = zeroNib;
+            mapCount++;
+            
+          }
+      if (padBeginning == 0)
+      {
+        //Serial.print("F F F F");
+              mapToDraw[mapCount] = nibbleBuffer[nibCount+1];
+              mapToDraw[mapCount+1] = nibbleBuffer[nibCount];
+              mapToDraw[mapCount+2] = nibbleBuffer[nibCount+3];
+              mapToDraw[mapCount+3] = nibbleBuffer[nibCount+2];
+              
+              mapCount = mapCount+4;
+              nibCount = nibCount+4;
+      }
+
+      for (w=1; w<(loopWidth+paddedColsAdded); w++) //Col
+      {
+
+        if (w == (loopWidth+paddedColsAdded) - 1)
+        {
+
+          if (fillWithBlank == 3)
+            {
+              //Serial.print(" F 0 0 0");
+              mapToDraw[mapCount] = zeroNib;
+              mapCount++;
+              mapToDraw[mapCount] = nibbleBuffer[nibCount];
+              nibCount++;
+              mapToDraw[mapCount] = zeroNib;
+              mapCount++;
+              mapToDraw[mapCount] = zeroNib;
+              mapCount++;
+            }
+          else if (fillWithBlank == 2)
+            {
+              //Serial.print(" F F 0 0");
+              mapToDraw[mapCount] = nibbleBuffer[nibCount];
+              mapCount++;
+              nibCount++;
+              mapToDraw[mapCount] = nibbleBuffer[nibCount];
+              mapCount++;
+              nibCount++;
+              mapToDraw[mapCount] = zeroNib;
+              mapCount++;
+              mapToDraw[mapCount] = zeroNib;
+              mapCount++;
+            }
+          else if (fillWithBlank == 1)
+            {
+              //Serial.print( " F F F 0");
+              mapToDraw[mapCount] = nibbleBuffer[nibCount];
+              mapCount++;
+              nibCount++;
+              mapToDraw[mapCount] = nibbleBuffer[nibCount];
+              mapCount++;
+              nibCount++;
+              mapToDraw[mapCount] = zeroNib;
+              mapCount++;
+              mapToDraw[mapCount] = nibbleBuffer[nibCount];
+              mapCount++;
+              nibCount++;
+            }
+          else if (fillWithBlank == 0)
+            {
+              //Serial.print( " F F F F");
+              mapToDraw[mapCount] = nibbleBuffer[nibCount+1];
+              mapToDraw[mapCount+1] = nibbleBuffer[nibCount];
+              mapToDraw[mapCount+2] = nibbleBuffer[nibCount+3];
+              mapToDraw[mapCount+3] = nibbleBuffer[nibCount+2];
+              
+              mapCount = mapCount+4;
+              nibCount = nibCount+4;
+            }
+        }
+
+        else
+        {
+            //Serial.print(" F F F F");
+              mapToDraw[mapCount] = nibbleBuffer[nibCount+1];
+              mapToDraw[mapCount+1] = nibbleBuffer[nibCount];
+              mapToDraw[mapCount+2] = nibbleBuffer[nibCount+3];
+              mapToDraw[mapCount+3] = nibbleBuffer[nibCount+2];
+              
+              mapCount = mapCount+4;
+              nibCount = nibCount+4;
+        } //Else not on edge
+      } //Col Loop 
+    }//Height Loop
+  //////////////////////////////////////////////////////////////////////////////
+  //The display is ready to recieve the array to be drawn to the screen.
+  //The column and row addresses are set, which tells the display what portion
+  //of the screen is being written.
+  //////////////////////////////////////////////////////////////////////////////
   writeCommand(0x15); //Set Column Address
-    writeData(0x1C);// + ceil(xPos/4));
+    writeData(0x1C + columnNums);// + ceil(xPos/4));
     writeData(col);
 
   writeCommand(0x75); //Set Row Address
@@ -574,39 +509,250 @@ void Display_obj::drawBitmap(int xPos, int yPos, double width, double height, un
   writeCommand(0x5C); //Set Write Ram
   
   int count = 0;
-  
     for (i=0; i<height; i++) //Row
     {
-      for (j=0; j<loopWidth; j++) //Col
+      //Serial.println(" ");
+      for (j=0; j<(loopWidth+paddedColsAdded); j++) //Col
       {
-        if (j == loopWidth - 1)
+          uint8_t highNib = (uint8_t)(mapToDraw[count]);
+          uint8_t lowNib = (uint8_t)(mapToDraw[count+1]);
+          uint8_t highNib2 = (uint8_t)(mapToDraw[count+2]);
+          uint8_t lowNib2 = (uint8_t)(mapToDraw[count+3]);
+          uint8_t byteToSend = nibbleCombine(highNib,lowNib);
+          uint8_t byteToSend2 = nibbleCombine(highNib2,lowNib2);
+
+          writeData(byteToSend2);
+          writeData(byteToSend);
+          
+          count = count+4;       
+      }    
+    }
+}
+
+/*
+  Function Name: drawRect
+  Function Parameters: (int) xPos - X Position of image
+                      (int) yPos - Y position of image
+                      (double) width - width of image in pixels
+                      (double) height - height of image in pixels
+  Function Description: Draw a rectangle covering the width and height inputted. This function
+    is a simplified version of the draw bitmap function, where each pixel is hardcoded to maximum brightness.
+*/
+  void Display_obj::drawRect(double xPos, double yPos, double width, double height){
+    unsigned int i, j, h, w;
+    double col, loopWidth, columnNums;
+    int fillWithBlank, mapSize,mapCount, padBeginning, paddedColsAdded;
+    uint8_t zeroNib,fNib;
+ 
+    //////////////////////////////////////////////////////////////////////////////
+    //This section checks to see if the image needs any padding.
+    //If an image is offset anything other than a factor of 4, it will need 
+    //padding as a column address points to a group of four colums.
+    //If an images width then needs padding at the end of the column to contain
+    //The proper image, this is also calculated.
+    //////////////////////////////////////////////////////////////////////////////
+    if ((int)xPos%4 != 0)
+      {padBeginning = ((int)xPos%4);}
+    else
+      {padBeginning = 0;}
+
+    if ((int)(width+padBeginning)%4 != 0)
+      {fillWithBlank = 4 - ((int)(width+padBeginning)%4);}
+    else
+      {fillWithBlank = 0;}
+
+    if (fillWithBlank == 4)
+      {fillWithBlank = 0;}
+
+    if (fillWithBlank + padBeginning >= 4)
+        {paddedColsAdded = 1;}   
+    else
+      {paddedColsAdded = 0;}
+
+    loopWidth = ceil((width/4));
+    columnNums = floor(xPos/4);
+
+    if (width <= 4)
+      {col = 0x1C;}
+    else
+      {col = ceil((width/4))-1 + 0x1C + columnNums + paddedColsAdded;}
+
+
+    //////////////////////////////////////////////////////////////////////////////
+    //This section will create a new bitmap, by writing each nibble to a new buffer, mapToDraw.
+    //Zeroes will be added to the bitmap order without breaking the image contained within
+    //the padding.
+    //////////////////////////////////////////////////////////////////////////////
+    mapSize = (width+fillWithBlank+padBeginning)*(height);
+    mapCount = 0;
+    zeroNib = 0x0;
+    fNib = 0xF;
+    uint8_t mapToDraw[mapSize*2];
+
+    for (h=0; h<height; h++)
+    {
+      //Serial.println(" ");
+      if (padBeginning == 1)
+          {
+            //Serial.print("1 F F F");
+            mapToDraw[mapCount] = fNib;
+              mapCount++;
+            mapToDraw[mapCount] = zeroNib;
+            mapCount++;
+            mapToDraw[mapCount] = fNib;
+              mapCount++;
+            mapToDraw[mapCount] = fNib;
+              mapCount++;
+          }
+      if (padBeginning == 2)
+          {
+            //Serial.print("1 1 F F");
+            mapToDraw[mapCount] = zeroNib;
+            mapCount++;
+            mapToDraw[mapCount] = zeroNib;
+            mapCount++;
+            mapToDraw[mapCount] = fNib;
+              mapCount++;
+            mapToDraw[mapCount] = fNib;
+              mapCount++;
+          }
+      if (padBeginning == 3)
+          {
+            //Serial.print("1 1 1 F");
+            mapToDraw[mapCount] = zeroNib;
+            mapCount++;
+            mapToDraw[mapCount] = zeroNib;
+            mapCount++;
+            mapToDraw[mapCount] = fNib;
+              mapCount++;
+            mapToDraw[mapCount] = zeroNib;
+            mapCount++;
+            
+          }
+      if (padBeginning == 0)
+      {
+        //Serial.print("F F F F");
+        mapToDraw[mapCount] = fNib;
+              mapCount++;
+        mapToDraw[mapCount] = fNib;
+              mapCount++;
+        mapToDraw[mapCount] = fNib;
+              mapCount++;
+        mapToDraw[mapCount] = fNib;
+              mapCount++;
+      }
+
+      for (w=1; w<(loopWidth+paddedColsAdded); w++) //Col
+      {
+
+        if (w == (loopWidth+paddedColsAdded) - 1)
         {
+
           if (fillWithBlank == 3)
-          {
-            writeData(0x00);
-            writeData(0x0F);
-          }
+            {
+              //Serial.print(" F 0 0 0");
+              mapToDraw[mapCount] = zeroNib;
+              mapCount++;
+              mapToDraw[mapCount] = fNib;
+              mapCount++;
+              mapToDraw[mapCount] = zeroNib;
+              mapCount++;
+              mapToDraw[mapCount] = zeroNib;
+              mapCount++;
+            }
           else if (fillWithBlank == 2)
-          {
-            writeData(0x00);
-            writeData(0xFF);
-          }
+            {
+              //Serial.print(" F F 0 0");
+              mapToDraw[mapCount] = fNib;
+              mapCount++;
+              mapToDraw[mapCount] = fNib;
+              mapCount++;
+              mapToDraw[mapCount] = zeroNib;
+              mapCount++;
+              mapToDraw[mapCount] = zeroNib;
+              mapCount++;
+            }
           else if (fillWithBlank == 1)
-          {
-            writeData(0x0F);
-            writeData(0xFF);
-          }
+            {
+              //Serial.print( " F F F 0");
+              mapToDraw[mapCount] = fNib;
+              mapCount++;
+              mapToDraw[mapCount] = fNib;
+              mapCount++;
+              mapToDraw[mapCount] = zeroNib;
+              mapCount++;
+              mapToDraw[mapCount] = fNib;
+              mapCount++;
+            }
+          else if (fillWithBlank == 0)
+            {
+              //Serial.print( " F F F F");
+              mapToDraw[mapCount] = fNib;
+              mapCount++;
+              mapToDraw[mapCount] = fNib;
+              mapCount++;
+              mapToDraw[mapCount] = fNib;
+              mapCount++;
+              mapToDraw[mapCount] = fNib;
+              mapCount++;
+            }
         }
+
         else
         {
-          writeData(0xFF);
+            //Serial.print(" F F F F");
+            mapToDraw[mapCount] = fNib;
+              mapCount++;
+            mapToDraw[mapCount] = fNib;
+              mapCount++;
+            mapToDraw[mapCount] = fNib;
+              mapCount++;
+            mapToDraw[mapCount] = fNib;
+              mapCount++;
+        } //Else not on edge
+      } //Col Loop 
+    }//Height Loop
+
+  //////////////////////////////////////////////////////////////////////////////
+  //The display is ready to recieve the array to be drawn to the screen.
+  //The column and row addresses are set, which tells the display what portion
+  //of the screen is being written.
+  //////////////////////////////////////////////////////////////////////////////
+  writeCommand(0x15); //Set Column Address
+    writeData(0x1C + columnNums);// + ceil(xPos/4));
+    writeData(col);
+
+  writeCommand(0x75); //Set Row Address
+  writeData(yPos);
+  if (height != 1)
+    {writeData((height-1)+yPos);}
+  else
+    {writeData(height+yPos);}
+  
+  writeCommand(0x5C); //Set Write Ram
+  
+  int count = 0;
+    for (i=0; i<height; i++) //Row
+    {
+      for (j=0; j<(loopWidth+paddedColsAdded); j++) //Col
+      {
+          uint8_t highNib = (uint8_t)(mapToDraw[count]);
+          uint8_t lowNib = (uint8_t)(mapToDraw[count+1]);
+          uint8_t highNib2 = (uint8_t)(mapToDraw[count+2]);
+          uint8_t lowNib2 = (uint8_t)(mapToDraw[count+3]);
+          uint8_t byteToSend = nibbleCombine(highNib,lowNib);
+          uint8_t byteToSend2 = nibbleCombine(highNib2,lowNib2);
+
+          writeData(byteToSend2);
+          writeData(byteToSend);
           
-          if (width > 2)
-            {writeData(0xFF);}
-        }
+          count = count+4;       
       }    
     }
   }
+
+
+
 
 
 /*
@@ -634,7 +780,7 @@ void Display_obj::drawBitmap(int xPos, int yPos, double width, double height, un
                       (int ms) - The delay in ms between each frame
   Function Description: Draw Each frame of a full bitmap with a certain delay.
   */
-void Display_obj::drawAnimatedBitmap(int xPos, int yPos, Bitmap& b, int ms){
+void Display_obj::drawAnimatedBitmap(double xPos, double yPos, Bitmap& b, int ms){
 
 size_t currSize = b.getSize();
 uint8_t numbOfFrames = b.getFrames();

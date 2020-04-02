@@ -8,15 +8,15 @@ class Bitmap;
 class Display_obj
 {
   public:
-    Display_obj();
-    ~Display_obj();
+    Display_obj(){};
+    ~Display_obj(){};
     void setupDisplay();
     void wipeDisplay();
     void fillDisplay();
     void drawCheckerboard();
-    void drawRect(int xPos, int yPos, double width, double height);
-    void drawBitmap(int xPos, int yPos, double width, double height, unsigned char *bitmap, size_t buffSize);
-    void drawAnimatedBitmap(int xPos, int yPos, Bitmap& b, int ms);
+    void drawRect(double xPos, double yPos, double width, double height);
+    void drawBitmap(double xPos, double yPos, double width, double height, unsigned char *bitmap, size_t buffSize);
+    void drawAnimatedBitmap(double xPos, double yPos, Bitmap& b, int ms);
 
 private:
     void writeCommand(int binary);
