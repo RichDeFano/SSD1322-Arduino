@@ -14,7 +14,7 @@ class Display_obj
     void wipeDisplay();
     void fillDisplay();
     void drawCheckerboard();
-    void drawRect(double xPos, double yPos, double width, double height);
+    void drawRect(double xPos, double yPos, double width, double height, bool fill=false, uint8_t fillShade=0x00);
     void drawBitmap(double xPos, double yPos, double width, double height, unsigned char *bitmap, size_t buffSize);
     void drawAnimatedBitmap(double xPos, double yPos, Bitmap& b, int ms);
 
