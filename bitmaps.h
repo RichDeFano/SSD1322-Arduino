@@ -27,7 +27,7 @@ class Bitmap
     }
 
     unsigned char* getBitmap(int f){return bitmap_frames[f];}
-
+    
     Bitmap(double w, double h, int f, size_t s, const unsigned char* const b[]) : width(w), height(h), frames(f), size(s) {
         setBitmap(b,f);
     };

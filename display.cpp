@@ -2,6 +2,7 @@
 #include "Arduino.h"
 #include "display.h"
 #include <stdint.h>
+
 #define CS A0
 #define RST A1
 #define DC A2
@@ -524,10 +525,11 @@ void Display_obj::drawBitmap(double xPos, double yPos, double width, double heig
 
   writeCommand(0x5C); //Set Write Ram
 
+  //Serial.println("---------------------");
   int count = 0;
   for (i = 0; i < height; i++)  //Row
   {
-    //Serial.println(" ");
+    Serial.println(" ");
     for (j = 0; j < (loopWidth + paddedColsAdded); j++) //Col
     {
       uint8_t highNib = (uint8_t)(mapToDraw[count]);
@@ -543,6 +545,8 @@ void Display_obj::drawBitmap(double xPos, double yPos, double width, double heig
       count = count + 4;
     }
   }
+  //Serial.println(" ");
+  //Serial.println("---------------------");
 }
 
 /*
@@ -859,5 +863,37 @@ void Display_obj::drawAnimatedBitmap(double xPos, double yPos, Bitmap &b, int ms
     unsigned char *frameAt = b.getBitmap(i);  //Return the pointer to a certain bitmap frame
     drawBitmap(xPos, yPos, width, height, frameAt, currSize); //Draw the frame to the screen
     delay(ms);  //Wait a certain amount of time before drawing another
+  }
+}
+
+
+/*
+  Function Name: drawText
+  Funciton Parameters: (int) xPos - The x position of the(start) of the text
+                      (int yPos) - The y position of the (start) of the text
+                      (bitmapLetter alph[]) - The alphabet containing the font and letter bitmaps
+                      (char str[]) - The text to be drawn to the screen
+                      (int stringSize) - The size of the inputted string
+  Function Description: Draw Each frame of a full bitmap with a certain delay.
+  */
+void Display_obj::drawText(double xPos, double yPos, bitmapLetter alph[], char str[], int stringSize){
+int startX = xPos;
+int startY = yPos;
+    for (int i=0; i < stringSize; i++){
+      char charAt = str[i];
+    uint16_t ascii = (uint16_t)charAt;
+    int width = alph[ascii].getWidth();
+    int height = alph[ascii].getHeight();
+    size_t siz = alph[ascii].getSize();
+    unsigned char* bitmap = alph[ascii].getLetter();
+    drawBitmap(startX,startY,width,height,bitmap,siz);
+    startX = startX - 8;
+    
+    if (startX <= 0)
+    {
+      startX = xPos;
+      startY = startY+16;
+    }
+
   }
 }
