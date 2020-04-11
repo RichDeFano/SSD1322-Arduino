@@ -22,6 +22,7 @@ class bitmapLetter
   		unsigned char* getLetter(){return bitmap;}
   		uint16_t getAscii(){return ascii;}
   		static void createDictionary(bitmapLetter alphabet[], int w, int h);
+  		static void createSmallDictionary(bitmapLetter alphabet[], int w, int h);
 
 private:
 	int width;

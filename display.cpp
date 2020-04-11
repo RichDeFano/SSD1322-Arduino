@@ -284,32 +284,8 @@ void Display_obj::drawBitmap(double xPos, double yPos, double width, double heig
 {
   unsigned int i, j, h, w;
   double col, loopWidth, columnNums;
-  int fillWithBlank, mapSize, mapCount, padBeginning, paddedColsAdded;
-  uint8_t zeroNib, fNib, lowBinMask, highBinMask;
-  bool onLowNibble;
-
-  lowBinMask = B00001111;
-  highBinMask = B11110000;
-  onLowNibble = false;
-  //////////////////////////////////////////////////////////////////////////////
-  //This section will read the incoming bitmap and save it to a buffer
-  //to be used later to fetch data from the array, one nibble at a time.
-  //////////////////////////////////////////////////////////////////////////////
-  uint8_t tempBuffer[buffSize]; //Initialize a buffer of the same size
-  uint8_t nibbleBuffer[buffSize *2];  //Initialize a buffer of double the size(as each nibble is seperated)
-
-  int nibCount = 0;
-  for (int q = 0; q < buffSize; q++)  //For each entry in the bitmap, copy the high and low nibbles to a new buffer.
-  {
-    tempBuffer[q] = pgm_read_byte(&bitmap[q]);
-    uint8_t highNib = (tempBuffer[q] &highBinMask);
-    uint8_t lowNib = (tempBuffer[q] &lowBinMask);
-    highNib = highNib >> 4;
-    nibbleBuffer[nibCount] = highNib;
-    nibCount++;
-    nibbleBuffer[nibCount] = lowNib;
-    nibCount++;
-  }
+  int fillWithBlank, padBeginning, paddedColsAdded;
+  uint8_t zeroNib, fNib;
   //////////////////////////////////////////////////////////////////////////////
   //This section checks to see if the image needs any padding.
   //If an image is offset anything other than a factor of 4, it will need 
@@ -318,191 +294,35 @@ void Display_obj::drawBitmap(double xPos, double yPos, double width, double heig
   //The proper image, this is also calculated.
   //////////////////////////////////////////////////////////////////////////////
   if ((int) xPos % 4 != 0)
-  {
-    padBeginning = ((int) xPos % 4);
-  }
+    {padBeginning = ((int) xPos % 4);}
   else
-  {
-    padBeginning = 0;
-  }
+    {padBeginning = 0;}
 
   if ((int)(width + padBeginning) % 4 != 0)
-  {
-    fillWithBlank = 4 - ((int)(width + padBeginning) % 4);
-  }
+    {fillWithBlank = 4 - ((int)(width + padBeginning) % 4);}
   else
-  {
-    fillWithBlank = 0;
-  }
+    {fillWithBlank = 0;}
 
   if (fillWithBlank == 4)
-  {
-    fillWithBlank = 0;
-  }
+    {fillWithBlank = 0;}
 
   if (fillWithBlank + padBeginning >= 4)
-  {
-    paddedColsAdded = 1;
-  }
+    {paddedColsAdded = 1;}
   else
-  {
-    paddedColsAdded = 0;
-  }
+    {paddedColsAdded = 0;}
 
   loopWidth = ceil((width / 4));
   columnNums = floor(xPos / 4);
-
-  if (width <= 4)
-  {
-    col = 0x1C;
-  }
-  else
-  {
-    col = ceil((width / 4)) - 1 + 0x1C + columnNums + paddedColsAdded;
-  }
-
-  //////////////////////////////////////////////////////////////////////////////
-  //This section will create a new bitmap, by writing each nibble to a new buffer, mapToDraw.
-  //Zeroes will be added to the bitmap order without breaking the image contained within
-  //the padding.
-  //////////////////////////////////////////////////////////////////////////////
-  mapSize = (width + fillWithBlank + padBeginning) *(height);
-  mapCount = 0;
   zeroNib = 0x0;
   fNib = 0xF;
-  uint8_t mapToDraw[mapSize *2];
-  nibCount = 0;
-  //Nibbles are added in the order of High_Byte(lowNibble,HighNibble), Low_Byte(lowNibble,HighNibble)
-  for (h = 0; h < height; h++)
-  {
-    //Serial.println(" ");
-    if (padBeginning == 1)
-    {
-      //Serial.print("1 F F F");
 
-      mapToDraw[mapCount] = nibbleBuffer[nibCount];
-      mapCount++;
-      nibCount++;
-      mapToDraw[mapCount] = zeroNib;
-      mapCount++;
-      mapToDraw[mapCount] = nibbleBuffer[nibCount];
-      mapCount++;
-      nibCount++;
-      mapToDraw[mapCount] = nibbleBuffer[nibCount];
-      mapCount++;
-      nibCount++;
-    }
-    if (padBeginning == 2)
-    {
-      //Serial.print("1 1 F F");
-      mapToDraw[mapCount] = zeroNib;
-      mapCount++;
-      mapToDraw[mapCount] = zeroNib;
-      mapCount++;
-      mapToDraw[mapCount] = nibbleBuffer[nibCount];
-      mapCount++;
-      nibCount++;
-      mapToDraw[mapCount] = nibbleBuffer[nibCount];
-      mapCount++;
-      nibCount++;
-    }
-    if (padBeginning == 3)
-    {
-      //Serial.print("1 1 1 F");
-      mapToDraw[mapCount] = zeroNib;
-      mapCount++;
-      mapToDraw[mapCount] = zeroNib;
-      mapCount++;
-      mapToDraw[mapCount] = nibbleBuffer[nibCount];
-      mapCount++;
-      nibCount++;
-      mapToDraw[mapCount] = zeroNib;
-      mapCount++;
-    }
-    if (padBeginning == 0)
-    {
-      //Serial.print("F F F F");
-      mapToDraw[mapCount] = nibbleBuffer[nibCount + 1];
-      mapToDraw[mapCount + 1] = nibbleBuffer[nibCount];
-      mapToDraw[mapCount + 2] = nibbleBuffer[nibCount + 3];
-      mapToDraw[mapCount + 3] = nibbleBuffer[nibCount + 2];
+  if (width <= 4)
+    {col = 0x1C;}
+  else
+    {col = ceil((width / 4)) - 1 + 0x1C + columnNums + paddedColsAdded;}
 
-      mapCount = mapCount + 4;
-      nibCount = nibCount + 4;
-    }
 
-    for (w = 1; w < (loopWidth + paddedColsAdded); w++) //Col
-    {
 
-      if (w == (loopWidth + paddedColsAdded) - 1)
-      {
-
-        if (fillWithBlank == 3)
-        {
-            //Serial.print(" F 0 0 0");
-          mapToDraw[mapCount] = zeroNib;
-          mapCount++;
-          mapToDraw[mapCount] = nibbleBuffer[nibCount];
-          nibCount++;
-          mapToDraw[mapCount] = zeroNib;
-          mapCount++;
-          mapToDraw[mapCount] = zeroNib;
-          mapCount++;
-        }
-        else if (fillWithBlank == 2)
-        {
-            //Serial.print(" F F 0 0");
-          mapToDraw[mapCount] = nibbleBuffer[nibCount];
-          mapCount++;
-          nibCount++;
-          mapToDraw[mapCount] = nibbleBuffer[nibCount];
-          mapCount++;
-          nibCount++;
-          mapToDraw[mapCount] = zeroNib;
-          mapCount++;
-          mapToDraw[mapCount] = zeroNib;
-          mapCount++;
-        }
-        else if (fillWithBlank == 1)
-        {
-            //Serial.print(" F F F 0");
-          mapToDraw[mapCount] = nibbleBuffer[nibCount];
-          mapCount++;
-          nibCount++;
-          mapToDraw[mapCount] = nibbleBuffer[nibCount];
-          mapCount++;
-          nibCount++;
-          mapToDraw[mapCount] = zeroNib;
-          mapCount++;
-          mapToDraw[mapCount] = nibbleBuffer[nibCount];
-          mapCount++;
-          nibCount++;
-        }
-        else if (fillWithBlank == 0)
-        {
-            //Serial.print(" F F F F");
-          mapToDraw[mapCount] = nibbleBuffer[nibCount + 1];
-          mapToDraw[mapCount + 1] = nibbleBuffer[nibCount];
-          mapToDraw[mapCount + 2] = nibbleBuffer[nibCount + 3];
-          mapToDraw[mapCount + 3] = nibbleBuffer[nibCount + 2];
-
-          mapCount = mapCount + 4;
-          nibCount = nibCount + 4;
-        }
-      }
-      else
-      {
-        //Serial.print(" F F F F");
-        mapToDraw[mapCount] = nibbleBuffer[nibCount + 1];
-        mapToDraw[mapCount + 1] = nibbleBuffer[nibCount];
-        mapToDraw[mapCount + 2] = nibbleBuffer[nibCount + 3];
-        mapToDraw[mapCount + 3] = nibbleBuffer[nibCount + 2];
-
-        mapCount = mapCount + 4;
-        nibCount = nibCount + 4;
-      } //Else not on edge
-    } //Col Loop 
-  } //Height Loop
   //////////////////////////////////////////////////////////////////////////////
   //The display is ready to recieve the array to be drawn to the screen.
   //The column and row addresses are set, which tells the display what portion
@@ -514,39 +334,135 @@ void Display_obj::drawBitmap(double xPos, double yPos, double width, double heig
 
   writeCommand(0x75); //Set Row Address
   writeData(yPos);
+
   if (height != 1)
-  {
-    writeData((height - 1) + yPos);
-  }
+    {writeData((height - 1) + yPos);}
   else
-  {
-    writeData(height + yPos);
-  }
+    {writeData(height + yPos);}
 
   writeCommand(0x5C); //Set Write Ram
 
-  //Serial.println("---------------------");
-  int count = 0;
-  for (i = 0; i < height; i++)  //Row
+  double nibbleCount = 0;
+  //Nibbles are added in the order of High_Byte(lowNibble,HighNibble), Low_Byte(lowNibble,HighNibble)
+  for (h = 0; h < height; h++)
   {
     Serial.println(" ");
-    for (j = 0; j < (loopWidth + paddedColsAdded); j++) //Col
+    if (padBeginning == 1)
     {
-      uint8_t highNib = (uint8_t)(mapToDraw[count]);
-      uint8_t lowNib = (uint8_t)(mapToDraw[count + 1]);
-      uint8_t highNib2 = (uint8_t)(mapToDraw[count + 2]);
-      uint8_t lowNib2 = (uint8_t)(mapToDraw[count + 3]);
-      uint8_t byteToSend = nibbleCombine(highNib, lowNib);
-      uint8_t byteToSend2 = nibbleCombine(highNib2, lowNib2);
-
-      writeData(byteToSend2);
-      writeData(byteToSend);
-
-      count = count + 4;
+      //Serial.print("1 F F F");
+      uint8_t highNib = getNibble(bitmap, nibbleCount);
+      nibbleCount++;
+      uint8_t lowNib = zeroNib;
+      uint8_t highNib2 = getNibble(bitmap, nibbleCount);
+      nibbleCount++;
+      uint8_t lowNib2 = getNibble(bitmap, nibbleCount);
+      nibbleCount++;
+      sendTwoBytes(highNib,lowNib,highNib2,lowNib2);
     }
-  }
-  //Serial.println(" ");
-  //Serial.println("---------------------");
+    if (padBeginning == 2)
+    {
+      //Serial.print("1 1 F F");
+      uint8_t highNib = zeroNib;
+      uint8_t lowNib = zeroNib;
+      uint8_t highNib2 = getNibble(bitmap, nibbleCount);
+      nibbleCount++;
+      uint8_t lowNib2 = getNibble(bitmap, nibbleCount);
+      nibbleCount++;
+      sendTwoBytes(highNib,lowNib,highNib2,lowNib2);
+    }
+    if (padBeginning == 3)
+    {
+      //Serial.print("1 1 1 F");
+      uint8_t highNib = zeroNib;
+      uint8_t lowNib = zeroNib;
+      uint8_t highNib2 = getNibble(bitmap, nibbleCount);
+      nibbleCount++;
+      uint8_t lowNib2 = zeroNib;
+      sendTwoBytes(highNib,lowNib,highNib2,lowNib2);
+    }
+    if (padBeginning == 0)
+    {
+      uint8_t highNib = getNibble(bitmap, nibbleCount);
+      nibbleCount++;
+      uint8_t lowNib = getNibble(bitmap, nibbleCount);
+      nibbleCount++;
+      uint8_t highNib2 = getNibble(bitmap, nibbleCount);
+      nibbleCount++;
+      uint8_t lowNib2 = getNibble(bitmap, nibbleCount);
+      nibbleCount++;
+      sendTwoBytes(lowNib,highNib,lowNib2,highNib2);
+    }
+
+    for (w = 1; w < (loopWidth + paddedColsAdded); w++) //Col
+    {
+
+      if (w == (loopWidth + paddedColsAdded) - 1)
+      {
+
+        if (fillWithBlank == 3)
+        {
+            //Serial.print(" F 0 0 0");
+          uint8_t highNib = zeroNib;
+          uint8_t lowNib = getNibble(bitmap, nibbleCount);
+          nibbleCount++;
+          uint8_t highNib2 = zeroNib;
+          uint8_t lowNib2 = zeroNib;
+          sendTwoBytes(highNib,lowNib,highNib2,lowNib2);
+        }
+        else if (fillWithBlank == 2)
+        {
+
+          uint8_t highNib = getNibble(bitmap, nibbleCount);
+      nibbleCount++;
+          uint8_t lowNib = getNibble(bitmap, nibbleCount);
+      nibbleCount++;
+          uint8_t highNib2 = zeroNib;
+          uint8_t lowNib2 = zeroNib;
+          sendTwoBytes(highNib,lowNib,highNib2,lowNib2);
+        }
+        else if (fillWithBlank == 1)
+        {
+          //Serial.print(" F F F 0");
+
+          uint8_t highNib = getNibble(bitmap, nibbleCount);
+      nibbleCount++;
+          uint8_t lowNib = getNibble(bitmap, nibbleCount);
+      nibbleCount++;
+          uint8_t highNib2 = zeroNib;
+          uint8_t lowNib2 = getNibble(bitmap, nibbleCount);
+      nibbleCount++;
+          sendTwoBytes(highNib,lowNib,highNib2,lowNib2);
+        }
+        else if (fillWithBlank == 0)
+        {
+            //Serial.print(" F F F F");
+
+          uint8_t highNib = getNibble(bitmap, nibbleCount);
+      nibbleCount++;
+          uint8_t lowNib = getNibble(bitmap, nibbleCount);
+      nibbleCount++;
+          uint8_t highNib2 = getNibble(bitmap, nibbleCount);
+      nibbleCount++;
+          uint8_t lowNib2 = getNibble(bitmap, nibbleCount);
+      nibbleCount++;
+          sendTwoBytes(lowNib,highNib,lowNib2,highNib2);
+        }
+      }
+      else
+      {
+        //Serial.print(" F F F F");
+          uint8_t highNib = getNibble(bitmap, nibbleCount);
+      nibbleCount++;
+          uint8_t lowNib = getNibble(bitmap, nibbleCount);
+      nibbleCount++;
+          uint8_t highNib2 = getNibble(bitmap, nibbleCount);
+      nibbleCount++;
+          uint8_t lowNib2 = getNibble(bitmap, nibbleCount);
+      nibbleCount++;
+          sendTwoBytes(lowNib,highNib,lowNib2,highNib2);
+      } //Else not on edge
+    } //Col Loop 
+  } //Height Loop
 }
 
 /*
@@ -562,8 +478,9 @@ void Display_obj::drawRect(double xPos, double yPos, double width, double height
 {
   unsigned int i, j, h, w;
   double col, loopWidth, columnNums;
-  int fillWithBlank, mapSize, mapCount, padBeginning, paddedColsAdded;
+  int fillWithBlank, padBeginning, paddedColsAdded;
   uint8_t zeroNib, fNib;
+
   //////////////////////////////////////////////////////////////////////////////
   //This section checks to see if the image needs any padding.
   //If an image is offset anything other than a factor of 4, it will need 
@@ -616,175 +533,6 @@ void Display_obj::drawRect(double xPos, double yPos, double width, double height
   }
 
   //////////////////////////////////////////////////////////////////////////////
-  //This section will create a new bitmap, by writing each nibble to a new buffer, mapToDraw.
-  //Zeroes will be added to the bitmap order without breaking the image contained within
-  //the padding.
-  //////////////////////////////////////////////////////////////////////////////
-  mapSize = (width + fillWithBlank + padBeginning) *(height);
-  mapCount = 0;
-  zeroNib = 0x0;
-  fNib = 0xF;
-  uint8_t mapToDraw[mapSize *2];
-
-  for (h = 0; h < height; h++)
-  {
-    //Serial.println(" ");
-    if (padBeginning == 1)
-    {
-      //Serial.print("1 F F F");
-      mapToDraw[mapCount] = fNib;
-      mapToDraw[mapCount + 1] = zeroNib;
-      if ((fill == false) || (h == 0) || (h == height - 1))
-      {
-        mapToDraw[mapCount + 2] = fNib;
-        mapToDraw[mapCount + 3] = fNib;
-      }
-      else
-      {
-        mapToDraw[mapCount + 2] = fillShade;
-        mapToDraw[mapCount + 3] = fillShade;
-      }
-      mapCount = mapCount + 4;
-    }
-    if (padBeginning == 2)
-    {
-      //Serial.print("1 1 F F");
-      mapToDraw[mapCount] = zeroNib;
-      mapToDraw[mapCount + 1] = zeroNib;
-      if ((fill == false) || (h == 0) || (h == height - 1))
-      {
-        mapToDraw[mapCount + 2] = fNib;
-        mapToDraw[mapCount + 3] = fNib;
-      }
-      else
-      {
-        mapToDraw[mapCount + 2] = fillShade;
-        mapToDraw[mapCount + 3] = fNib;
-      }
-      mapCount = mapCount + 4;
-    }
-    if (padBeginning == 3)
-    {
-      //Serial.print("1 1 1 F");
-      mapToDraw[mapCount] = zeroNib;
-      mapToDraw[mapCount + 1] = zeroNib;
-      mapToDraw[mapCount + 2] = fNib;
-      mapToDraw[mapCount + 3] = zeroNib;
-      mapCount = mapCount + 4;
-    }
-    if (padBeginning == 0)
-    {
-      //Serial.print("F F F F");
-      if ((fill == false) || (h == 0) || (h == height - 1))
-      {
-        mapToDraw[mapCount] = fNib;
-        mapToDraw[mapCount + 1] = fNib;
-        mapToDraw[mapCount + 2] = fNib;
-        mapToDraw[mapCount + 3] = fNib;
-      }
-      else
-      {
-        mapToDraw[mapCount] = fillShade;
-        mapToDraw[mapCount + 1] = fNib;
-        mapToDraw[mapCount + 2] = fillShade;
-        mapToDraw[mapCount + 3] = fillShade;
-      }
-      mapCount = mapCount + 4;
-    }
-
-    for (w = 1; w < (loopWidth + paddedColsAdded); w++) //Col
-    {
-
-      if (w == (loopWidth + paddedColsAdded) - 1)
-      {
-
-        if (fillWithBlank == 3)
-        {
-            //Serial.print(" F 0 0 0");
-          mapToDraw[mapCount] = zeroNib;
-          mapToDraw[mapCount + 1] = fNib;
-          mapToDraw[mapCount + 2] = zeroNib;
-          mapToDraw[mapCount + 3] = zeroNib;
-          mapCount = mapCount + 4;
-        }
-        else if (fillWithBlank == 2)
-        {
-            //Serial.print(" F F 0 0");
-          if ((fill == false) || (h == 0) || (h == height - 1))
-          {
-            mapToDraw[mapCount] = fNib;
-            mapToDraw[mapCount + 1] = fNib;
-          }
-          else
-          {
-            mapToDraw[mapCount] = fillShade;
-            mapToDraw[mapCount + 1] = fNib;
-          }
-          mapToDraw[mapCount + 2] = zeroNib;
-          mapToDraw[mapCount + 3] = zeroNib;
-          mapCount = mapCount + 4;
-        }
-        else if (fillWithBlank == 1)
-        {
-            //Serial.print(" F F F 0");
-          if ((fill == false) || (h == 0) || (h == height - 1))
-          {
-            mapToDraw[mapCount] = fNib;
-            mapToDraw[mapCount + 1] = fNib;
-          }
-          else
-          {
-            mapToDraw[mapCount] = fillShade;
-            mapToDraw[mapCount + 1] = fillShade;
-          }
-          mapToDraw[mapCount + 2] = zeroNib;
-          mapToDraw[mapCount + 3] = fNib;
-          mapCount = mapCount + 4;
-        }
-        else if (fillWithBlank == 0)
-        {
-            //Serial.print(" F F F F");
-          if ((fill == false) || (h == 0) || (h == height - 1))
-          {
-            mapToDraw[mapCount] = fNib;
-            mapToDraw[mapCount] = fNib;
-            mapToDraw[mapCount] = fNib;
-            mapToDraw[mapCount] = fNib;
-            mapCount = mapCount + 4;
-          }
-          else
-          {
-            mapToDraw[mapCount] = fillShade;
-            mapToDraw[mapCount + 1] = fillShade;
-            mapToDraw[mapCount + 2] = fNib;
-            mapToDraw[mapCount + 3] = fillShade;
-            mapCount = mapCount + 4;
-          }
-        }
-      }
-      else
-      {
-        //Serial.print(" F F F F");
-        if ((fill == false) || (h == 0) || (h == height - 1))
-        {
-          mapToDraw[mapCount] = fNib;
-          mapToDraw[mapCount + 1] = fNib;
-          mapToDraw[mapCount + 2] = fNib;
-          mapToDraw[mapCount + 3] = fNib;
-        }
-        else
-        {
-          mapToDraw[mapCount] = fillShade;
-          mapToDraw[mapCount + 1] = fillShade;
-          mapToDraw[mapCount + 2] = fillShade;
-          mapToDraw[mapCount + 3] = fillShade;
-        }
-        mapCount = mapCount + 4;
-      } //Else not on edge
-    } //Col Loop 
-  } //Height Loop
-
-  //////////////////////////////////////////////////////////////////////////////
   //The display is ready to recieve the array to be drawn to the screen.
   //The column and row addresses are set, which tells the display what portion
   //of the screen is being written.
@@ -806,24 +554,174 @@ void Display_obj::drawRect(double xPos, double yPos, double width, double height
 
   writeCommand(0x5C); //Set Write Ram
 
-  int count = 0;
-  for (i = 0; i < height; i++)  //Row
+
+  //////////////////////////////////////////////////////////////////////////////
+  //This section will create a new bitmap, by writing each nibble to a new buffer, mapToDraw.
+  //Zeroes will be added to the bitmap order without breaking the image contained within
+  //the padding.
+  //////////////////////////////////////////////////////////////////////////////
+  zeroNib = 0x0;
+  fNib = 0xF;
+
+  for (h = 0; h < height; h++)
   {
-    for (j = 0; j < (loopWidth + paddedColsAdded); j++) //Col
+    //Serial.println(" ");
+    if (padBeginning == 1)
     {
-      uint8_t highNib = (uint8_t)(mapToDraw[count]);
-      uint8_t lowNib = (uint8_t)(mapToDraw[count + 1]);
-      uint8_t highNib2 = (uint8_t)(mapToDraw[count + 2]);
-      uint8_t lowNib2 = (uint8_t)(mapToDraw[count + 3]);
-      uint8_t byteToSend = nibbleCombine(highNib, lowNib);
-      uint8_t byteToSend2 = nibbleCombine(highNib2, lowNib2);
+      uint8_t highNib = fNib;
+          uint8_t lowNib = zeroNib;
+          uint8_t highNib2 = fillShade;
+          uint8_t lowNib2 = fillShade;
+          if ((fill == false) || (h == 0) || (h == height - 1))
+            {
+              highNib2 = fNib;
+              lowNib2 = fNib;
+              //Serial.print("F F");
+            }
 
-      writeData(byteToSend2);
-      writeData(byteToSend);
-
-      count = count + 4;
+          sendTwoBytes(highNib,lowNib,highNib2,lowNib2);
     }
-  }
+    if (padBeginning == 2)
+    {
+      //Serial.print("P P ");
+      uint8_t highNib = zeroNib;
+          uint8_t lowNib = zeroNib;
+          uint8_t highNib2 = fillShade;
+          uint8_t lowNib2 = fNib;
+          if ((fill == false) || (h == 0) || (h == height - 1))
+            {
+              highNib2 = fNib;
+              lowNib2 = fNib;
+              //Serial.print("F F");
+            }
+
+          sendTwoBytes(highNib,lowNib,highNib2,lowNib2);
+    }
+    if (padBeginning == 3)
+    {
+      uint8_t highNib = zeroNib;
+          uint8_t lowNib = zeroNib;
+          uint8_t highNib2 = fNib;
+          uint8_t lowNib2 = zeroNib;
+          sendTwoBytes(highNib,lowNib,highNib2,lowNib2);
+    }
+    if (padBeginning == 0)
+    {
+      
+      if ((fill == false) || (h == 0) || (h == height - 1))
+      {
+        uint8_t highNib = fNib;
+          uint8_t lowNib = fNib;
+          uint8_t highNib2 = fNib;
+          uint8_t lowNib2 = fNib;
+          sendTwoBytes(highNib,lowNib,highNib2,lowNib2);
+        //Serial.print("F F F F");
+      }
+      else
+      {
+          uint8_t highNib = fillShade;
+          uint8_t lowNib = fNib;
+          uint8_t highNib2 = fillShade;
+          uint8_t lowNib2 = fillShade;
+          sendTwoBytes(highNib,lowNib,highNib2,lowNib2);
+        //Serial.print("F S S S");
+      }
+    }
+
+    for (w = 1; w < (loopWidth + paddedColsAdded); w++) //Col
+    {
+
+      if (w == (loopWidth + paddedColsAdded) - 1)
+      {
+
+        if (fillWithBlank == 3)
+        {
+          uint8_t highNib = zeroNib;
+          uint8_t lowNib = fNib;
+          uint8_t highNib2 = zeroNib;
+          uint8_t lowNib2 = zeroNib;
+          sendTwoBytes(highNib,lowNib,highNib2,lowNib2);
+        }
+        else if (fillWithBlank == 2)
+        {
+          uint8_t highNib = fNib;
+          uint8_t lowNib = fillShade;
+          //Serial.print(" F F B B");
+          if ((fill == false) || (h == 0) || (h == height - 1))
+          {
+            highNib = fNib;
+            lowNib = fNib;
+            //Serial.print(" F F");
+          }
+          
+            uint8_t highNib2 = zeroNib;
+            uint8_t lowNib2 = zeroNib;
+            sendTwoBytes(highNib,lowNib,highNib2,lowNib2);
+          //Serial.print(" B B");
+        }
+        else if (fillWithBlank == 1)
+        {
+          uint8_t highNib = fillShade;
+          uint8_t lowNib = fillShade;
+        
+          if ((fill == false) || (h == 0) || (h == height - 1))
+          {
+            highNib = fNib;
+            lowNib = fNib;
+            //Serial.print(" F F");
+          }
+          uint8_t highNib2 = zeroNib;
+          uint8_t lowNib2 = fNib;
+          sendTwoBytes(highNib,lowNib,highNib2,lowNib2);
+          //Serial.print(" F B");
+        }
+        else if (fillWithBlank == 0)
+        {
+          
+          if ((fill == false) || (h == 0) || (h == height - 1))
+          {
+            uint8_t highNib = fNib;
+            uint8_t lowNib = fNib;
+            uint8_t highNib2 = fNib;
+            uint8_t lowNib2 = fNib;
+            sendTwoBytes(highNib,lowNib,highNib2,lowNib2);
+            //Serial.print(" F F F F");
+          }
+          else
+          {
+            uint8_t highNib = fillShade;
+            uint8_t lowNib = fillShade;
+            uint8_t highNib2 = fNib;
+            uint8_t lowNib2 = fillShade;
+            sendTwoBytes(highNib,lowNib,highNib2,lowNib2);
+          }
+        }
+      }
+      else
+      {
+        //Serial.print(" F F F F");
+        if ((fill == false) || (h == 0) || (h == height - 1))
+        {
+          uint8_t highNib = fNib;
+          uint8_t lowNib = fNib;
+          uint8_t highNib2 = fNib;
+          uint8_t lowNib2 = fNib;
+          sendTwoBytes(highNib,lowNib,highNib2,lowNib2);
+          //Serial.print(" F F F F");
+        }
+        else
+        {
+          uint8_t highNib = fillShade;
+          uint8_t lowNib = fillShade;
+          uint8_t highNib2 = fillShade;
+          uint8_t lowNib2 = fillShade;
+          sendTwoBytes(highNib,lowNib,highNib2,lowNib2);
+          //Serial.print(" S S S S");
+        }
+       // mapCount = mapCount + 4;
+      } //Else not on edge
+    } //Col Loop 
+  } //Height Loop
 }
 
 /*
@@ -841,6 +739,39 @@ uint8_t Display_obj::nibbleCombine(uint8_t highNibble, uint8_t lowNibble)
   emptyMask = emptyMask + highNibble + lowNibble;
   return emptyMask;
 }
+
+uint8_t Display_obj::getNibble(unsigned char* bitmap, double index){
+  uint8_t lowBinMask = B00001111;
+  uint8_t highBinMask = B11110000;
+  double newIndex = floor(index/2);
+  bool lowNib = false;
+
+  if ((int)index%2 != 0)
+    {lowNib = true;}
+
+    uint8_t tempByte = pgm_read_byte(&bitmap[(int)newIndex]);
+            uint8_t readHighNib = (tempByte & highBinMask);
+            uint8_t readLowNib = (tempByte & lowBinMask);
+            readHighNib = readHighNib >> 4;
+    if (lowNib == false)
+      {return readHighNib;}
+    else
+      {return readLowNib;}
+}
+
+/*
+  Function Name: sendTwoBytes
+  Function Parameters: (uint8_t) nNib - One of four nibbles to be sent in a specific order.
+  Function Description: Combines two nibbles into a byte, which is to be immediately
+  sent to the display. This is a helper function used for drawing purposes.
+*/
+void Display_obj::sendTwoBytes(uint8_t highNib, uint8_t lowNib, uint8_t highNib2, uint8_t lowNib2){
+          uint8_t byteToSend = nibbleCombine(highNib, lowNib);
+          uint8_t byteToSend2 = nibbleCombine(highNib2, lowNib2);
+          writeData(byteToSend2);
+          writeData(byteToSend);
+}
+
 
 /*
   Function Name: drawAnimatedBitmap
@@ -866,6 +797,24 @@ void Display_obj::drawAnimatedBitmap(double xPos, double yPos, Bitmap &b, int ms
   }
 }
 
+void Display_obj::drawSegmentedBitmap(double xPos, double yPos, Bitmap &b, int ms)
+{
+
+  size_t currSize = b.getSize();
+  uint8_t numbOfFrames = b.getFrames();
+  double width = b.getWidth();
+  double height = b.getHeight();
+
+  for (int i = 0; i < numbOfFrames; i++)
+  {
+    unsigned char *frameAt = b.getBitmap(i);  //Return the pointer to a certain bitmap frame
+    drawBitmap(xPos, yPos+(8*i), width, height, frameAt, currSize); //Draw the frame to the screen
+    delay(ms);  //Wait a certain amount of time before drawing another
+    Serial.print("Printing Frame ");
+    Serial.println(i);
+  }
+}
+
 
 /*
   Function Name: drawText
@@ -876,16 +825,17 @@ void Display_obj::drawAnimatedBitmap(double xPos, double yPos, Bitmap &b, int ms
                       (int stringSize) - The size of the inputted string
   Function Description: Draw Each frame of a full bitmap with a certain delay.
   */
-void Display_obj::drawText(double xPos, double yPos, bitmapLetter alph[], char str[], int stringSize){
+void Display_obj::drawText(double xPos, double yPos, bitmapLetter alph[], char str[], int stringSize, uint8_t asciiBuff)
+{
 int startX = xPos;
 int startY = yPos;
     for (int i=0; i < stringSize; i++){
       char charAt = str[i];
     uint16_t ascii = (uint16_t)charAt;
-    int width = alph[ascii].getWidth();
-    int height = alph[ascii].getHeight();
-    size_t siz = alph[ascii].getSize();
-    unsigned char* bitmap = alph[ascii].getLetter();
+    int width = alph[ascii-asciiBuff].getWidth();
+    int height = alph[ascii-asciiBuff].getHeight();
+    size_t siz = alph[ascii-asciiBuff].getSize();
+    unsigned char* bitmap = alph[ascii-asciiBuff].getLetter();
     drawBitmap(startX,startY,width,height,bitmap,siz);
     startX = startX - 8;
     

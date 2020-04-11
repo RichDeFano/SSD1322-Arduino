@@ -109,8 +109,7 @@ bitmapLetter l77(width,height,0x77,siz,zelda_font_77);
 bitmapLetter l78(width,height,0x78,siz,zelda_font_78);
 bitmapLetter l79(width,height,0x79,siz,zelda_font_79);
 bitmapLetter l7A(width,height,0x7A,siz,zelda_font_7A);
-/////////////////////////////////////////////////////////////////
-alphabet[l20.getAscii()] = l20;
+////////////////////////////////////////////////////////////
 alphabet[l21.getAscii()] = l21;
 alphabet[l22.getAscii()] = l22;
 alphabet[l23.getAscii()] = l23;
@@ -210,4 +209,29 @@ alphabet[l7A.getAscii()] = l7A;
 
 }
 
+static void bitmapLetter::createSmallDictionary(bitmapLetter alphabet[], int width, int height){
+bitmapLetter smallZero(width,height,0x30,sizeof(small_zero),small_zero);
+bitmapLetter smallOne(width,height,0x31,sizeof(small_zero),small_one);
+bitmapLetter smallTwo(width,height,0x32,sizeof(small_zero),small_two);
+bitmapLetter smallThree(width,height,0x33,sizeof(small_zero),small_three);
+bitmapLetter smallFour(width,height,0x34,sizeof(small_zero),small_four);
+bitmapLetter smallFive(width,height,0x35,sizeof(small_zero),small_five);
+bitmapLetter smallSix(width,height,0x36,sizeof(small_zero),small_six);
+bitmapLetter smallSeven(width,height,0x37,sizeof(small_zero),small_seven);
+bitmapLetter smallEight(width,height,0x38,sizeof(small_zero),small_eight);
+bitmapLetter smallNine(width,height,0x39,sizeof(small_zero),small_nine);
+bitmapLetter smallSemicolon(width/2,height,0x3A,sizeof(small_zero),small_semicolon);
+/////////////////////////////////////////////////////////////////
+alphabet[smallZero.getAscii() - 0x30] = smallZero;
+alphabet[smallOne.getAscii() - 0x30] = smallOne;
+alphabet[smallTwo.getAscii() - 0x30] = smallTwo;
+alphabet[smallThree.getAscii() - 0x30] = smallThree;
+alphabet[smallFour.getAscii() - 0x30] = smallFour;
+alphabet[smallFive.getAscii() - 0x30] = smallFive;
+alphabet[smallSix.getAscii() - 0x30] = smallSix;
+alphabet[smallSeven.getAscii() - 0x30] = smallSeven;
+alphabet[smallEight.getAscii() - 0x30] = smallEight;
+alphabet[smallNine.getAscii() - 0x30] = smallNine;
+alphabet[smallSemicolon.getAscii() - 0x30] = smallSemicolon;
 
+}
