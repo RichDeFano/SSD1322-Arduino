@@ -724,6 +724,7 @@ void Display_obj::drawRect(double xPos, double yPos, double width, double height
   } //Height Loop
 }
 
+
 /*
   Function Name: nibbleCombine
   Function Parameters: (uint8_t) highNibble - The high four bits to be sent.
@@ -794,24 +795,6 @@ void Display_obj::drawAnimatedBitmap(double xPos, double yPos, Bitmap &b, int ms
     unsigned char *frameAt = b.getBitmap(i);  //Return the pointer to a certain bitmap frame
     drawBitmap(xPos, yPos, width, height, frameAt, currSize); //Draw the frame to the screen
     delay(ms);  //Wait a certain amount of time before drawing another
-  }
-}
-
-void Display_obj::drawSegmentedBitmap(double xPos, double yPos, Bitmap &b, int ms)
-{
-
-  size_t currSize = b.getSize();
-  uint8_t numbOfFrames = b.getFrames();
-  double width = b.getWidth();
-  double height = b.getHeight();
-
-  for (int i = 0; i < numbOfFrames; i++)
-  {
-    unsigned char *frameAt = b.getBitmap(i);  //Return the pointer to a certain bitmap frame
-    drawBitmap(xPos, yPos+(8*i), width, height, frameAt, currSize); //Draw the frame to the screen
-    delay(ms);  //Wait a certain amount of time before drawing another
-    Serial.print("Printing Frame ");
-    Serial.println(i);
   }
 }
 
